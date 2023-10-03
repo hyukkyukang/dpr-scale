@@ -5,7 +5,7 @@ from dpr_scale.conf.config import MainConfig
 from omegaconf import open_dict
 from pytorch_lightning.trainer import Trainer
 
-@hydra.main(config_path="../conf", config_name="config")
+@hydra.main(config_path="/root/dpr_scale/dpr_scale/conf", config_name="config")
 def main(cfg: MainConfig):
     # Temp patch for datamodule refactoring
     cfg.task.datamodule = None

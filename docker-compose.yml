@@ -1,0 +1,23 @@
+version: "3"
+
+services:
+    CITADEL:
+        shm_size: 4gb
+        image: hyukkyukang/qagpt:latest
+        container_name: CITADEL
+        stdin_open: true
+        tty: true
+        network_mode: "host"
+        environment:
+            - TZ=Asia/Seoul
+        volumes:
+            - /etc/timezone:/etc/timezone:ro 
+            - ./:/root/dpr_scale
+            - /mnt/sdc/hkkang/QAGPT:/mnt/md0/hkkang/QAGPT
+        deploy:
+            resources:
+                reservations:
+                    devices:
+                        - capabilities: [gpu]
+
+

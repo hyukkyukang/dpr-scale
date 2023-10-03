@@ -1,5 +1,5 @@
 # @package _group_
-gpus: 8
+gpus: 2
 max_steps: 500
 max_epochs: 40
 num_nodes: 1

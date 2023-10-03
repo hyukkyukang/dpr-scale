@@ -2,17 +2,15 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
 import mmap
+
+import hkkang_utils.file as file_utils
 import torch
-from dpr_scale.utils.utils import (
-    ContiguousDistributedSamplerForTest,
-    PathManager,
-    maybe_add_title,
-)
-from dpr_scale.datamodule.dpr import (
-    MemoryMappedDataset,
-    QueryCSVDataset,
-    DenseRetrieverDataModuleBase
-)
+
+from dpr_scale.datamodule.dpr import (DenseRetrieverDataModuleBase,
+                                      MemoryMappedDataset, QueryCSVDataset)
+from dpr_scale.utils.utils import (ContiguousDistributedSamplerForTest,
+                                   PathManager, maybe_add_title)
+
 
 class IDMemoryMappedDataset(MemoryMappedDataset):
     """
@@ -41,10 +39,13 @@ class IDCSVDataset(IDMemoryMappedDataset):
     A memory mapped dataset for csv files
     """
 
-    def __init__(self, path, sep="\t", use_id=False):
+    def __init__(self, path, sep="\t", use_id=False, custom_header=None):
         super().__init__(path, header=True, use_id=use_id)
         self.sep = sep
-        self.columns = self._get_header()
+        if custom_header:
+            self.columns = custom_header
+        else:
+            self.columns = self._get_header()
         if use_id:
             offset = self.mm.tell()
             line = self.mm.readline()
@@ -69,6 +70,9 @@ class IDCSVDataset(IDMemoryMappedDataset):
 
     def process_line(self, line):
         vals = self._parse_line(line)
+        # Process hotpotqa corpus
+        if len(vals) == 5:
+            vals = [vals[0], vals[1]]
         if len(self.columns) == len(vals):
             return dict(zip(self.columns, vals))
         else:  # hack
@@ -93,7 +97,7 @@ class QueryTRECDataset(IDMemoryMappedDataset):
                 self.offset_dict[qid] = offset
                 offset = self.mm.tell()
                 line = self.mm.readline()
-                
+
     def _parse_line(self, line):
         """Implementation of csv quoting."""
         row = line.decode().rstrip("\r\n").split(self.sep)
@@ -108,6 +112,27 @@ class QueryTRECDataset(IDMemoryMappedDataset):
             "id": vals[0],
             "question": vals[1],
         }
+
+class QueryJSONDataset(torch.utils.data.Dataset):
+    """
+    A memory mapped dataset for query trec files (such as the test set)
+    """
+
+    def __init__(self, path):
+        self.path = path
+        self.__post_init__()
+        
+    def __post_init__(self):
+        # Load data
+        self.original_data = file_utils.read_json_file(self.path)
+        self.data = [{"id": row["id"], "question": row["question"]} for row in self.original_data]
+        
+    def __len__(self) -> int:
+        return len(self.data)
+    
+    def __getitem__(self, index: int):
+        return self.data[index]
+
 
 
 class TRECDataset(IDMemoryMappedDataset):
@@ -154,8 +179,17 @@ class DenseRetrieverQueriesDataModule(DenseRetrieverDataModuleBase):
         self.test_batch_size = test_batch_size
         self.num_workers = num_workers
 
+        # Dynamically load data based on the file extension
+        if test_path.endswith(".json"):
+            test_dataset = QueryJSONDataset(test_path)
+        elif trec_format or test_path.endswith(".trec"):
+            test_dataset =QueryTRECDataset(test_path)
+        elif test_path.endswith(".tsv") or test_path.endswith(".csv"):
+            test_dataset = QueryCSVDataset(test_path)
+        else:
+            raise ValueError(f"Unsupported file extension: {test_path}")
         self.datasets = {
-            "test": QueryTRECDataset(test_path) if trec_format else QueryCSVDataset(test_path),
+            "test": test_dataset
         }
     def collate(self, batch, stage):
         ctx_tensors = self._transform(

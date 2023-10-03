@@ -49,9 +49,17 @@ class CITADELRetrievalTask(MultiVecRetrieverTask):
         print(f"Loading checkpoint from {self.checkpoint_path}")
         checkpoint = pl_load(
             self.checkpoint_path, map_location=lambda storage, loc: storage)
+        # # Remove positional embedding
+        # keys_to_remove = [
+        #     key
+        #     for key, value in checkpoint["state_dict"].items()
+        #     if key.endswith("position_ids")
+        # ]
+        # for key in keys_to_remove:
+        #     del checkpoint["state_dict"][key]
         self.load_state_dict(checkpoint['state_dict'])
         print(f"Loading passages from {self.passages}")
-        self.ctxs = IDCSVDataset(self.passages, use_id=True)
+        self.ctxs = IDCSVDataset(self.passages, use_id=True, custom_header=["id", "text"])
         print("Setting up index...")
         if self.cuda:
             if self.quantizer == "pq":

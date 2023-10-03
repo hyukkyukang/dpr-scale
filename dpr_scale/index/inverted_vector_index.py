@@ -137,7 +137,7 @@ class IVFGPUIndex:
 
     def compute_similarity(self, q_repr, ctx_repr):
         return torch.matmul(q_repr, ctx_repr.T)
-        
+
     def load_context_expert(self, input_dir):
         print("Loading Index...")
         cls_path = os.path.join(os.path.dirname(input_dir), "cls.pkl")
@@ -145,6 +145,8 @@ class IVFGPUIndex:
         if os.path.exists(cls_path):
             with open(cls_path, "rb") as f:
                 data = pickle.load(f)
+                if len(data) == 8841823:
+                    data = data[1:]
                 try:
                     self.ctx_cls = data.cuda().to(torch.float16)
                 except Exception:
@@ -164,6 +166,10 @@ class IVFGPUIndex:
 
         # GPU portion
         for k, id_data, repr_data in cache[:gpu_end]:
+            if type(id_data) == np.ndarray:
+                id_data = torch.from_numpy(id_data)
+            if type(repr_data) == np.ndarray:
+                repr_data = torch.from_numpy(repr_data)
             id_data, repr_data = id_data.cuda().to(torch.int64), repr_data.cuda().to(torch.float16)
             gpu_memory += id_data.nelement() * id_data.element_size() + repr_data.nelement() * repr_data.element_size()
             self.cached_experts[k] = (id_data, repr_data)
@@ -237,6 +243,8 @@ class IVFPQGPUIndex(IVFGPUIndex):
             with open(cls_path, "rb") as f:
                 data = pickle.load(f)
                 code_data, codeword_data = data
+                if code_data.shape[0] == 8841823:
+                    code_data = code_data[1:]
                 self.ctx_cls = self.decode(torch.from_numpy(code_data).cuda().to(torch.int64), torch.from_numpy(codeword_data).cuda().to(torch.float16), self.cls_dim)
             gpu_memory += self.ctx_cls.nelement() * self.ctx_cls.element_size()
 

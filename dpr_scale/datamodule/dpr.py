@@ -293,6 +293,7 @@ class DenseRetrieverPassagesDataModule(DenseRetrieverDataModuleBase):
         num_workers: int = 0,  # increasing this bugs out right now
         use_title: bool = False,  # use the title for context passages
         sep_token: str = " [SEP] ",  # sep token between title and passage
+        is_wiki_corpus: bool = False,  # is the corpus a wiki corpus
         *args,
         **kwargs,
     ):
@@ -301,10 +302,15 @@ class DenseRetrieverPassagesDataModule(DenseRetrieverDataModuleBase):
         self.use_title = use_title
         self.sep_token = sep_token
         self.num_workers = num_workers
+        self.is_wiki_corpus = is_wiki_corpus
 
         self.datasets = {
             "test": CSVDataset(test_path),
         }
+        
+        if self.is_wiki_corpus:
+            self.id_mapping: Dict[str, int] = {self.datasets["test"][idx]["id"]: idx for idx in range(len(self.datasets["test"]))}
+            
 
     def collate(self, batch, stage):
         ctx_tensors = self._transform(
@@ -316,9 +322,14 @@ class DenseRetrieverPassagesDataModule(DenseRetrieverDataModuleBase):
             ]
         )
         if "id" in batch[0]:
+            # Handle id mapping for wiki corpus
+            if self.is_wiki_corpus:
+                corpus_ids = [self.id_mapping[row["id"]] for row in batch]
+            else:
+                corpus_ids = [row["id"] for row in batch]
             return {
                 "contexts_ids": ctx_tensors,
-                "corpus_ids": [row["id"] for row in batch],
+                "corpus_ids": corpus_ids,
             }
         return {"contexts_ids": ctx_tensors}
 

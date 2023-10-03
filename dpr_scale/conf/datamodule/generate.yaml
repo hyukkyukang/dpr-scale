@@ -2,5 +2,5 @@
 datamodule:
   _target_: dpr_scale.datamodule.dpr.DenseRetrieverPassagesDataModule
   test_path: "/private/home/vladk/data/wikipedia/wiki_passages/psgs_w100.tsv"
-  test_batch_size: 128
+  test_batch_size: 256
   use_title: True

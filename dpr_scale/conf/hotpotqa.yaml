@@ -11,10 +11,10 @@ task:
     warmup_steps: 3000
 
 datamodule:
-    train_path: /root/dpr_scale/data/msmarco/citadel/train.jsonl
-    val_path: /root/dpr_scale/data/msmarco/citadel/dev.jsonl
-    test_path: /root/dpr_scale/data/msmarco/citadel/dev.jsonl
-    is_wiki_corpus: false
+    train_path: /root/dpr_scale/data/hotpotqa/train.json
+    val_path: /root/dpr_scale/data/hotpotqa/dev.json
+    test_path: /root/dpr_scale/data/hotpotqa/dev.json
+    is_wiki_corpus: true
     batch_size: 16
     num_negative: 1
     num_val_negative: 1
@@ -23,7 +23,7 @@ datamodule:
     use_title: true
 
 trainer:
-    gpus: 2
+    gpus: 1
     num_nodes: 1
     max_epochs: 20
     num_sanity_val_steps: 0
