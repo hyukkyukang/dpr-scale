@@ -76,6 +76,7 @@ class IDCSVDataset(IDMemoryMappedDataset):
         if len(self.columns) == len(vals):
             return dict(zip(self.columns, vals))
         else:  # hack
+            raise ValueError(f"Columns: {self.columns} and vals: {vals} do not match")
             self.__getitem__(0)
 
 

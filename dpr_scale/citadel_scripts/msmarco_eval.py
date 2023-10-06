@@ -15,6 +15,7 @@ import pytrec_eval
 import collections
 from collections import Counter
 import numpy as np
+import hkkang_utils.file as file_utils
 MaxMRRRank = 10
 
 
@@ -42,13 +43,26 @@ def load_reference_from_stream(f):
     return qids_to_relevant_passageids
 
 
-def load_reference(path_to_reference):
+def load_reference(path_to_reference, path_to_corpus: str = None):
     """Load Reference reference relevant passages
     Args:path_to_reference (str): path to a file to load.
     Returns:qids_to_relevant_passageids (dict): dictionary mapping from query_id (int) to relevant passages (list of ints). 
     """
-    with open(path_to_reference,'r') as f:
-        qids_to_relevant_passageids = load_reference_from_stream(f)
+    if path_to_reference.endswith('.json'):
+        data = file_utils.read_json_file(path_to_reference)
+        corpus = file_utils.read_csv_file(path_to_corpus, delimiter='\t')
+        # title2id
+        title2id = {datum["title"]: idx for idx, datum in enumerate(corpus)}
+        qids_to_relevant_passageids = {}
+        # Create qid to relevant passage mapping
+        for datum in data:
+            gold_titles = list(set([d[0] for d in datum["supporting_facts"]]))
+            # title to id
+            gold_ids = [title2id[title] for title in gold_titles]
+            qids_to_relevant_passageids[datum["id"]] = gold_ids
+    else:
+        with open(path_to_reference,'r') as f:
+            qids_to_relevant_passageids = load_reference_from_stream(f)
     return qids_to_relevant_passageids
 
 
@@ -89,7 +103,10 @@ def load_candidate_from_stream_trec(f):
     for line in f:
         try:
             line = line.strip().split(' ')
-            qid = int(line[0])
+            try:
+                qid = int(line[0])
+            except:
+                qid = line[0]
             pid = int(line[2])
             rank = int(line[3])
             if qid not in qid_to_ranked_candidate_passages:
@@ -222,7 +239,7 @@ def compute_metrics(qids_to_relevant_passageids, qids_to_ranked_candidate_passag
     return all_scores
                 
 
-def compute_metrics_from_files(path_to_reference, path_to_candidate, perform_checks=True):
+def compute_metrics_from_files(path_to_reference, path_to_candidate, perform_checks=True, path_to_corpus=None):
     """Compute MRR metric
     Args:    
     p_path_to_reference_file (str): path to reference file.
@@ -239,7 +256,7 @@ def compute_metrics_from_files(path_to_reference, path_to_candidate, perform_che
         dict: dictionary of metrics {'MRR': <MRR Score>}
     """
     
-    qids_to_relevant_passageids = load_reference(path_to_reference)
+    qids_to_relevant_passageids = load_reference(path_to_reference, path_to_corpus)
     qids_to_ranked_candidate_passages = load_candidate(path_to_candidate)
     if perform_checks:
         allowed, message = quality_checks_qids(qids_to_relevant_passageids, qids_to_ranked_candidate_passages)
@@ -253,10 +270,11 @@ def main():
     python msmarco_eval_ranking.py <path_to_reference_file> <path_to_candidate_file>
     """
 
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 3 or len(sys.argv) == 4:
         path_to_reference = sys.argv[1]
         path_to_candidate = sys.argv[2]
-        metrics = compute_metrics_from_files(path_to_reference, path_to_candidate)
+        path_to_corpus = sys.argv[3] if len(sys.argv) == 4 else None
+        metrics = compute_metrics_from_files(path_to_reference, path_to_candidate, path_to_corpus=path_to_corpus)
         print('#####################')
         for metric in sorted(metrics):
             print('{}: {}'.format(metric, metrics[metric]))

@@ -59,7 +59,7 @@ class CITADELRetrievalTask(MultiVecRetrieverTask):
         #     del checkpoint["state_dict"][key]
         self.load_state_dict(checkpoint['state_dict'])
         print(f"Loading passages from {self.passages}")
-        self.ctxs = IDCSVDataset(self.passages, use_id=True, custom_header=["id", "text"])
+        self.ctxs = IDCSVDataset(self.passages, use_id=True)
         print("Setting up index...")
         if self.cuda:
             if self.quantizer == "pq":

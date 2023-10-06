@@ -140,6 +140,9 @@ class IVFGPUIndex:
 
     def load_context_expert(self, input_dir):
         print("Loading Index...")
+        # preprocess path
+        if input_dir.endswith("/"):
+            input_dir = input_dir[:-1]
         cls_path = os.path.join(os.path.dirname(input_dir), "cls.pkl")
         gpu_memory = 0
         if os.path.exists(cls_path):
@@ -152,7 +155,7 @@ class IVFGPUIndex:
                 except Exception:
                     self.ctx_cls = torch.from_numpy(data).cuda().to(torch.float16)
             gpu_memory += self.ctx_cls.nelement() * self.ctx_cls.element_size()
-
+        
         cache = []
         input_paths = sorted(glob.glob(os.path.join(input_dir, "*.pkl")))
         for input_path in tqdm(input_paths):
