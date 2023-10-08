@@ -15,7 +15,7 @@ datamodule:
     val_path: /root/dpr_scale/data/hotpotqa/dev.json
     test_path: /root/dpr_scale/data/hotpotqa/dev.json
     is_wiki_corpus: true
-    batch_size: 16
+    batch_size: 256
     num_negative: 1
     num_val_negative: 1
     num_test_negative: 50
@@ -23,7 +23,7 @@ datamodule:
     use_title: true
 
 trainer:
-    gpus: 2
+    gpus: 1
     num_nodes: 1
     max_epochs: 20
     num_sanity_val_steps: 0
